@@ -106,7 +106,7 @@ fun CounterScreen(viewModel: MainViewModel) {
                     Icon(Icons.Default.Add, contentDescription = "Add Word")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                FloatingActionButton(onClick = { viewModel.deleteAllWords() }) {
+                FloatingActionButton(onClick = { viewModel.resetAllCounts() }) {
                     Icon(Icons.Default.Refresh, contentDescription = "Reset")
                 }
             }
@@ -117,12 +117,13 @@ fun CounterScreen(viewModel: MainViewModel) {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+            Column(
                 modifier = Modifier.weight(1f)
             ) {
-                items(words) { word ->
-                    WordCard(word = word, onSettingsClick = { showSettingsDialog = word })
+                words.forEach { word ->
+                    Box(modifier = Modifier.weight(1f)) {
+                        WordCard(word = word, onSettingsClick = { showSettingsDialog = word })
+                    }
                 }
             }
             Button(
@@ -147,7 +148,8 @@ fun CounterScreen(viewModel: MainViewModel) {
         SettingsDialog(
             word = showSettingsDialog!!,
             onDismiss = { showSettingsDialog = null },
-            onSave = { viewModel.updateWord(it) }
+            onSave = { viewModel.updateWord(it) },
+            onDelete = { viewModel.deleteWord(it) }
         )
     }
 
@@ -221,7 +223,7 @@ fun AddWordDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
 }
 
 @Composable
-fun SettingsDialog(word: Word, onDismiss: () -> Unit, onSave: (Word) -> Unit) {
+fun SettingsDialog(word: Word, onDismiss: () -> Unit, onSave: (Word) -> Unit, onDelete: (Word) -> Unit) {
     var text by remember { mutableStateOf(word.text) }
     var count by remember { mutableStateOf(word.count.toString()) }
     var backgroundColor by remember { mutableStateOf(word.backgroundColor) }
@@ -254,18 +256,27 @@ fun SettingsDialog(word: Word, onDismiss: () -> Unit, onSave: (Word) -> Unit) {
                     onColorChange = { textColor = it }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = {
-                    onSave(
-                        word.copy(
-                            text = text,
-                            count = count.toIntOrNull() ?: 0,
-                            backgroundColor = backgroundColor,
-                            textColor = textColor
+                Row {
+                    Button(onClick = {
+                        onSave(
+                            word.copy(
+                                text = text,
+                                count = count.toIntOrNull() ?: 0,
+                                backgroundColor = backgroundColor,
+                                textColor = textColor
+                            )
                         )
-                    )
-                    onDismiss()
-                }) {
-                    Text("Save")
+                        onDismiss()
+                    }) {
+                        Text("Save")
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    Button(onClick = {
+                        onDelete(word)
+                        onDismiss()
+                    }) {
+                        Text("Delete")
+                    }
                 }
             }
         }

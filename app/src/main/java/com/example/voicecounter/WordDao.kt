@@ -1,6 +1,7 @@
 package com.example.voicecounter
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
@@ -17,6 +18,9 @@ interface WordDao {
     @Update
     suspend fun update(word: Word)
 
-    @Query("DELETE FROM words")
-    suspend fun deleteAll()
+    @Delete
+    suspend fun delete(word: Word)
+
+    @Query("UPDATE words SET count = 0")
+    suspend fun resetAllCounts()
 }
