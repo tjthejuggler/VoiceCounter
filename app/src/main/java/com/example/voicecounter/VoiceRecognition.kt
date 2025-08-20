@@ -9,13 +9,15 @@ import android.speech.SpeechRecognizer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
+data class RecognitionResult(val text: String, val confidence: Float)
+
 class VoiceRecognition(private val context: Context) {
 
     private val _speechRecognitionAvailable = MutableStateFlow(SpeechRecognizer.isRecognitionAvailable(context))
     val speechRecognitionAvailable: StateFlow<Boolean> = _speechRecognitionAvailable
 
-    private val _recognizedText = MutableStateFlow("")
-    val recognizedText: StateFlow<String> = _recognizedText
+    private val _recognitionResult = MutableStateFlow<RecognitionResult?>(null)
+    val recognitionResult: StateFlow<RecognitionResult?> = _recognitionResult
 
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
@@ -49,8 +51,9 @@ class VoiceRecognition(private val context: Context) {
 
                 override fun onResults(results: Bundle?) {
                     val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    if (!matches.isNullOrEmpty()) {
-                        _recognizedText.value = matches[0]
+                    val scores = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)
+                    if (!matches.isNullOrEmpty() && scores != null) {
+                        _recognitionResult.value = RecognitionResult(matches[0], scores[0])
                     }
                     if (isListening) {
                         startListening()

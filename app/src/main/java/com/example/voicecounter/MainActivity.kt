@@ -25,7 +25,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -81,15 +84,26 @@ class MainActivity : ComponentActivity() {
 fun CounterScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
     val voiceRecognition = remember { VoiceRecognition(context) }
-    val recognizedText by voiceRecognition.recognizedText.collectAsState()
+    val recognitionResult by voiceRecognition.recognitionResult.collectAsState()
     val words by viewModel.words.collectAsState()
+    val wordRecognized by viewModel.wordRecognized.collectAsState()
     var isListening by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf<Word?>(null) }
     var showAddWordDialog by remember { mutableStateOf(false) }
+    var buttonColor by remember { mutableStateOf(Color.Gray) }
 
-    LaunchedEffect(recognizedText) {
-        if (recognizedText.isNotBlank()) {
-            viewModel.incrementWordCount(recognizedText)
+    LaunchedEffect(recognitionResult) {
+        recognitionResult?.let {
+            viewModel.incrementWordCount(it)
+        }
+    }
+
+    LaunchedEffect(wordRecognized) {
+        wordRecognized?.let {
+            buttonColor = Color(android.graphics.Color.parseColor(it.backgroundColor))
+            kotlinx.coroutines.delay(500)
+            buttonColor = Color.Gray
+            viewModel.onRecognitionComplete()
         }
     }
 
@@ -126,6 +140,7 @@ fun CounterScreen(viewModel: MainViewModel) {
                     }
                 }
             }
+            val animatedColor by animateColorAsState(targetValue = buttonColor, animationSpec = tween(500))
             Button(
                 onClick = {
                     isListening = !isListening
@@ -137,7 +152,8 @@ fun CounterScreen(viewModel: MainViewModel) {
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = animatedColor)
             ) {
                 Text(if (isListening) "Stop Listening" else "Start Listening")
             }
