@@ -1,28 +1,57 @@
 package com.example.voicecounter
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
-data class Word(val text: String, var count: Int)
+class MainViewModel(private val repository: WordRepository) : ViewModel() {
 
-class MainViewModel : ViewModel() {
+    val words: StateFlow<List<Word>> = repository.allWords.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
-    private val _words = MutableStateFlow(listOf(Word("Hello", 0), Word("World", 0)))
-    val words: StateFlow<List<Word>> = _words
-
-    fun addWord(word: String) {
-        _words.value = _words.value + Word(word, 0)
+    fun addWord(word: String) = viewModelScope.launch {
+        repository.insert(Word(text = word, count = 0, backgroundColor = "#FFFFFF", textColor = "#000000"))
     }
 
     fun incrementWordCount(recognizedText: String) {
-        val updatedWords = _words.value.map { word ->
-            if (recognizedText.contains(word.text, ignoreCase = true)) {
-                word.copy(count = word.count + 1)
-            } else {
-                word
+        viewModelScope.launch {
+            val currentWords = words.value
+            val updatedWords = currentWords.map { word ->
+                if (recognizedText.contains(word.text, ignoreCase = true)) {
+                    word.copy(count = word.count + 1)
+                } else {
+                    word
+                }
             }
+            updatedWords.forEach { repository.update(it) }
         }
-        _words.value = updatedWords
+    }
+
+    fun updateWord(word: Word) = viewModelScope.launch {
+        repository.update(word)
+    }
+
+    fun deleteAllWords() = viewModelScope.launch {
+        repository.deleteAll()
+    }
+}
+
+class MainViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
+            val database = AppDatabase.getDatabase(application)
+            val repository = WordRepository(database.wordDao())
+            @Suppress("UNCHECKED_CAST")
+            return MainViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
