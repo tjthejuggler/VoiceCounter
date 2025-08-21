@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -24,6 +26,7 @@ class VoiceRecognition(private val context: Context) {
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
     private val sharedPreferences = context.getSharedPreferences("settings", Application.MODE_PRIVATE)
+    private val handler = Handler(Looper.getMainLooper())
 
     fun startListening() {
         if (!speechRecognitionAvailable.value) {
@@ -47,13 +50,13 @@ class VoiceRecognition(private val context: Context) {
 
                 override fun onEndOfSpeech() {
                     if (isListening) {
-                        startListening()
+                        handler.postDelayed({ startListening() }, 100)
                     }
                 }
 
                 override fun onError(error: Int) {
                     if (isListening && (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)) {
-                        startListening()
+                        handler.postDelayed({ startListening() }, 100)
                     }
                 }
 
@@ -67,7 +70,7 @@ class VoiceRecognition(private val context: Context) {
                         Log.d("user_said", matches.joinToString(separator = "\n"))
                     }
                     if (isListening) {
-                        startListening()
+                        handler.postDelayed({ startListening() }, 100)
                     }
                 }
 
@@ -101,10 +104,12 @@ class VoiceRecognition(private val context: Context) {
 
     fun stopListening() {
         isListening = false
+        handler.removeCallbacksAndMessages(null)
         speechRecognizer?.stopListening()
     }
 
     fun destroy() {
+        handler.removeCallbacksAndMessages(null)
         speechRecognizer?.destroy()
     }
 }

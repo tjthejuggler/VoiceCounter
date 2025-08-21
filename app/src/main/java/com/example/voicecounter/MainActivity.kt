@@ -1,11 +1,15 @@
 package com.example.voicecounter
 
 import android.Manifest
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
+import android.speech.RecognizerIntent
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -13,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -112,15 +117,15 @@ fun CounterScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit) {
             floatingActionButton = {
                 Column {
                     FloatingActionButton(onClick = { showAddWordDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Word")
+                        Icon(Icons.Filled.Add, contentDescription = "Add Word")
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     FloatingActionButton(onClick = { viewModel.resetAllCounts() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Reset")
+                        Icon(Icons.Filled.Refresh, contentDescription = "Reset")
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     FloatingActionButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }
                 }
             }
@@ -196,7 +201,7 @@ fun WordCard(word: Word, onSettingsClick: () -> Unit) {
                 onClick = onSettingsClick,
                 modifier = Modifier.align(Alignment.TopEnd)
             ) {
-                Icon(Icons.Default.Settings, contentDescription = "Settings")
+                Icon(Icons.Filled.Settings, contentDescription = "Settings")
             }
             Text(
                 text = word.count.toString(),
@@ -257,6 +262,20 @@ fun SettingsDialog(word: Word, onDismiss: () -> Unit, onSave: (Word) -> Unit, on
     var textColor by remember { mutableStateOf(word.textColor) }
     var confidenceThreshold by remember { mutableStateOf(word.confidenceThreshold) }
 
+    val speechRecognitionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data: Intent? = result.data
+            val results = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            if (results != null) {
+                val existingWords = words.split(",").map { it.trim() }.toMutableSet()
+                existingWords.addAll(results)
+                words = existingWords.joinToString(", ")
+            }
+        }
+    }
+
     Dialog(onDismissRequest = onDismiss) {
         Card {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -266,11 +285,24 @@ fun SettingsDialog(word: Word, onDismiss: () -> Unit, onSave: (Word) -> Unit, on
                     label = { Text("Name") }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = words,
-                    onValueChange = { words = it },
-                    label = { Text("Words (comma-separated)") }
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = words,
+                        onValueChange = { words = it },
+                        label = { Text("Words (comma-separated)") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = {
+                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                            putExtra(RecognizerIntent.EXTRA_PROMPT, "Say the trigger word")
+                            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 10)
+                        }
+                        speechRecognitionLauncher.launch(intent)
+                    }) {
+                        Icon(Icons.Filled.PlayArrow, contentDescription = "Train")
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = count,
@@ -302,7 +334,7 @@ fun SettingsDialog(word: Word, onDismiss: () -> Unit, onSave: (Word) -> Unit, on
                         onSave(
                             word.copy(
                                 name = name,
-                                words = words.split(",").map { it.trim() },
+                                words = words.split(",").map { it.trim() }.distinct(),
                                 count = count.toIntOrNull() ?: 0,
                                 backgroundColor = backgroundColor,
                                 textColor = textColor,

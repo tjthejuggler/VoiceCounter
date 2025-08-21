@@ -106,7 +106,7 @@ fun SettingSwitch(title: String, checked: Boolean, onCheckedChange: (Boolean) ->
         Text(text = title, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
         IconButton(onClick = onInfoClick) {
-            Icon(Icons.Default.Info, contentDescription = "Info")
+            Icon(Icons.Filled.Info, contentDescription = "Info")
         }
     }
 }
@@ -117,7 +117,7 @@ fun SettingSlider(title: String, value: Int, onValueChange: (Int) -> Unit, range
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = "$title: $value", modifier = Modifier.weight(1f))
             IconButton(onClick = onInfoClick) {
-                Icon(Icons.Default.Info, contentDescription = "Info")
+                Icon(Icons.Filled.Info, contentDescription = "Info")
             }
         }
         Slider(
