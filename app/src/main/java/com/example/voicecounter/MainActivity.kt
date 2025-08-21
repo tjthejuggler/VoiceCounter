@@ -175,7 +175,7 @@ fun CounterScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit) {
     if (showAddWordDialog) {
         AddWordDialog(
             onDismiss = { showAddWordDialog = false },
-            onAdd = { viewModel.addWord(it) }
+            onAdd = { name, words -> viewModel.addWord(name, words) }
         )
     }
 }
@@ -206,7 +206,7 @@ fun WordCard(word: Word, onSettingsClick: () -> Unit) {
                 modifier = Modifier.align(Alignment.Center)
             )
             Text(
-                text = word.text,
+                text = word.name,
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = Color(android.graphics.Color.parseColor(word.textColor)),
@@ -219,19 +219,26 @@ fun WordCard(word: Word, onSettingsClick: () -> Unit) {
 }
 
 @Composable
-fun AddWordDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
-    var text by remember { mutableStateOf("") }
+fun AddWordDialog(onDismiss: () -> Unit, onAdd: (String, List<String>) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var words by remember { mutableStateOf("") }
     Dialog(onDismissRequest = onDismiss) {
         Card {
             Column(modifier = Modifier.padding(16.dp)) {
                 OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    label = { Text("Word") }
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = words,
+                    onValueChange = { words = it },
+                    label = { Text("Words (comma-separated)") }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(onClick = {
-                    onAdd(text)
+                    onAdd(name, words.split(",").map { it.trim() })
                     onDismiss()
                 }) {
                     Text("Add")
@@ -243,7 +250,8 @@ fun AddWordDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
 
 @Composable
 fun SettingsDialog(word: Word, onDismiss: () -> Unit, onSave: (Word) -> Unit, onDelete: (Word) -> Unit) {
-    var text by remember { mutableStateOf(word.text) }
+    var name by remember { mutableStateOf(word.name) }
+    var words by remember { mutableStateOf(word.words.joinToString(", ")) }
     var count by remember { mutableStateOf(word.count.toString()) }
     var backgroundColor by remember { mutableStateOf(word.backgroundColor) }
     var textColor by remember { mutableStateOf(word.textColor) }
@@ -253,9 +261,15 @@ fun SettingsDialog(word: Word, onDismiss: () -> Unit, onSave: (Word) -> Unit, on
         Card {
             Column(modifier = Modifier.padding(16.dp)) {
                 OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    label = { Text("Word") }
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = words,
+                    onValueChange = { words = it },
+                    label = { Text("Words (comma-separated)") }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
@@ -287,7 +301,8 @@ fun SettingsDialog(word: Word, onDismiss: () -> Unit, onSave: (Word) -> Unit, on
                     Button(onClick = {
                         onSave(
                             word.copy(
-                                text = text,
+                                name = name,
+                                words = words.split(",").map { it.trim() },
                                 count = count.toIntOrNull() ?: 0,
                                 backgroundColor = backgroundColor,
                                 textColor = textColor,

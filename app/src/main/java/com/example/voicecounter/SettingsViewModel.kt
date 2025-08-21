@@ -41,6 +41,14 @@ class SettingsViewModel(application: Application) : ViewModel() {
         sharedPreferences.edit().putInt("extra_speech_input_possibly_complete_silence_length_millis", value).apply()
         _extraSpeechInputPossiblyCompleteSilenceLengthMillis.value = value
     }
+
+    private val _extraMaxResults = MutableStateFlow(sharedPreferences.getInt("extra_max_results", 5))
+    val extraMaxResults: StateFlow<Int> = _extraMaxResults
+
+    fun setExtraMaxResults(value: Int) {
+        sharedPreferences.edit().putInt("extra_max_results", value).apply()
+        _extraMaxResults.value = value
+    }
 }
 
 class SettingsViewModelFactory(private val application: Application) : ViewModelProvider.Factory {

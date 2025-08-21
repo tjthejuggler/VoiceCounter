@@ -21,22 +21,24 @@ class MainViewModel(application: Application, private val repository: WordReposi
         initialValue = emptyList()
     )
 
-    fun addWord(word: String) = viewModelScope.launch {
-        repository.insert(Word(text = word, count = 0, backgroundColor = "#FFFFFF", textColor = "#000000", confidenceThreshold = 0.5f))
+    fun addWord(name: String, words: List<String>) = viewModelScope.launch {
+        repository.insert(Word(name = name, words = words, count = 0, backgroundColor = "#FFFFFF", textColor = "#000000", confidenceThreshold = 0.5f))
     }
 
     fun incrementWordCount(results: List<RecognitionResult>) {
         viewModelScope.launch {
             val currentWords = words.value
             for (result in results) {
-                val matchedWord = currentWords.find { result.text.contains(it.text, ignoreCase = true) }
+                val matchedWord = currentWords.find { word ->
+                    word.words.any { result.text.contains(it, ignoreCase = true) }
+                }
                 if (matchedWord != null) {
                     if (result.confidence >= matchedWord.confidenceThreshold || result.confidence == -1f) {
                         val updatedWord = matchedWord.copy(count = matchedWord.count + 1)
                         repository.update(updatedWord)
                         _wordRecognized.value = updatedWord
                         if (sharedPreferences.getBoolean("speak_words", false)) {
-                            tts.speak(updatedWord.text)
+                            tts.speak(updatedWord.name)
                         }
                         break
                     }

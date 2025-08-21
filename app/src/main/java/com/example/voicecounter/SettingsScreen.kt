@@ -1,19 +1,11 @@
 package com.example.voicecounter
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Slider
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -31,6 +23,8 @@ fun SettingsScreen(
     val extraPartialResults by viewModel.extraPartialResults.collectAsState()
     val extraSpeechInputCompleteSilenceLengthMillis by viewModel.extraSpeechInputCompleteSilenceLengthMillis.collectAsState()
     val extraSpeechInputPossiblyCompleteSilenceLengthMillis by viewModel.extraSpeechInputPossiblyCompleteSilenceLengthMillis.collectAsState()
+    val extraMaxResults by viewModel.extraMaxResults.collectAsState()
+    var showInfoDialog by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -53,45 +47,84 @@ fun SettingsScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "Speak recognized words", modifier = Modifier.weight(1f))
-                Switch(
-                    checked = speakWords,
-                    onCheckedChange = { viewModel.setSpeakWords(it) }
-                )
+            SettingSwitch(
+                title = "Speak recognized words",
+                checked = speakWords,
+                onCheckedChange = { viewModel.setSpeakWords(it) },
+                onInfoClick = { showInfoDialog = "When enabled, the app will speak the name of the counter when a word is recognized." }
+            )
+            SettingSwitch(
+                title = "Enable partial results",
+                checked = extraPartialResults,
+                onCheckedChange = { viewModel.setExtraPartialResults(it) },
+                onInfoClick = { showInfoDialog = "When enabled, the app will receive and process recognition results as you speak. This can improve reliability but may also lead to more false positives." }
+            )
+            SettingSlider(
+                title = "Complete silence length",
+                value = extraSpeechInputCompleteSilenceLengthMillis,
+                onValueChange = { viewModel.setExtraSpeechInputCompleteSilenceLengthMillis(it) },
+                range = 0..5000,
+                steps = 50,
+                onInfoClick = { showInfoDialog = "The amount of time in milliseconds that the recognizer will wait for speech to end before considering it complete." }
+            )
+            SettingSlider(
+                title = "Possibly complete silence length",
+                value = extraSpeechInputPossiblyCompleteSilenceLengthMillis,
+                onValueChange = { viewModel.setExtraSpeechInputPossiblyCompleteSilenceLengthMillis(it) },
+                range = 0..5000,
+                steps = 50,
+                onInfoClick = { showInfoDialog = "The amount of time in milliseconds that the recognizer will wait after a pause in speech before considering it possibly complete." }
+            )
+            SettingSlider(
+                title = "Max results",
+                value = extraMaxResults,
+                onValueChange = { viewModel.setExtraMaxResults(it) },
+                range = 1..10,
+                steps = 9,
+                onInfoClick = { showInfoDialog = "The maximum number of recognition results to return. A higher number may improve reliability but will also increase processing." }
+            )
+        }
+    }
+
+    if (showInfoDialog != null) {
+        AlertDialog(
+            onDismissRequest = { showInfoDialog = null },
+            title = { Text("Info") },
+            text = { Text(showInfoDialog!!) },
+            confirmButton = {
+                Button(onClick = { showInfoDialog = null }) {
+                    Text("OK")
+                }
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "Enable partial results", modifier = Modifier.weight(1f))
-                Switch(
-                    checked = extraPartialResults,
-                    onCheckedChange = { viewModel.setExtraPartialResults(it) }
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Column {
-                Text(text = "Complete silence length: $extraSpeechInputCompleteSilenceLengthMillis ms")
-                Slider(
-                    value = extraSpeechInputCompleteSilenceLengthMillis.toFloat(),
-                    onValueChange = { viewModel.setExtraSpeechInputCompleteSilenceLengthMillis(it.toInt()) },
-                    valueRange = 0f..5000f,
-                    steps = 50
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Column {
-                Text(text = "Possibly complete silence length: $extraSpeechInputPossiblyCompleteSilenceLengthMillis ms")
-                Slider(
-                    value = extraSpeechInputPossiblyCompleteSilenceLengthMillis.toFloat(),
-                    onValueChange = { viewModel.setExtraSpeechInputPossiblyCompleteSilenceLengthMillis(it.toInt()) },
-                    valueRange = 0f..5000f,
-                    steps = 50
-                )
+        )
+    }
+}
+
+@Composable
+fun SettingSwitch(title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit, onInfoClick: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(text = title, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        IconButton(onClick = onInfoClick) {
+            Icon(Icons.Default.Info, contentDescription = "Info")
+        }
+    }
+}
+
+@Composable
+fun SettingSlider(title: String, value: Int, onValueChange: (Int) -> Unit, range: IntRange, steps: Int, onInfoClick: () -> Unit) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text = "$title: $value", modifier = Modifier.weight(1f))
+            IconButton(onClick = onInfoClick) {
+                Icon(Icons.Default.Info, contentDescription = "Info")
             }
         }
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onValueChange(it.toInt()) },
+            valueRange = range.first.toFloat()..range.last.toFloat(),
+            steps = steps
+        )
     }
 }

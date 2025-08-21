@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -31,6 +32,7 @@ class VoiceRecognition(private val context: Context) {
         val extraPartialResults = sharedPreferences.getBoolean("extra_partial_results", true)
         val extraSpeechInputCompleteSilenceLengthMillis = sharedPreferences.getInt("extra_speech_input_complete_silence_length_millis", 1000)
         val extraSpeechInputPossiblyCompleteSilenceLengthMillis = sharedPreferences.getInt("extra_speech_input_possibly_complete_silence_length_millis", 500)
+        val extraMaxResults = sharedPreferences.getInt("extra_max_results", 5)
 
         if (speechRecognizer == null) {
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
@@ -61,6 +63,9 @@ class VoiceRecognition(private val context: Context) {
                     _recognitionResult.value = matches?.mapIndexed { index, text ->
                         RecognitionResult(text, scores.getOrElse(index) { -1f })
                     } ?: emptyList()
+                    if (matches != null) {
+                        Log.d("user_said", matches.joinToString(separator = "\n"))
+                    }
                     if (isListening) {
                         startListening()
                     }
@@ -73,6 +78,9 @@ class VoiceRecognition(private val context: Context) {
                         _recognitionResult.value = matches?.mapIndexed { index, text ->
                             RecognitionResult(text, scores.getOrElse(index) { -1f })
                         } ?: emptyList()
+                        if (matches != null) {
+                            Log.d("user_said", matches.joinToString(separator = "\n"))
+                        }
                     }
                 }
 
@@ -85,6 +93,7 @@ class VoiceRecognition(private val context: Context) {
         intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, extraPartialResults)
         intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, extraSpeechInputCompleteSilenceLengthMillis)
         intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, extraSpeechInputPossiblyCompleteSilenceLengthMillis)
+        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, extraMaxResults)
 
         isListening = true
         speechRecognizer?.startListening(intent)
