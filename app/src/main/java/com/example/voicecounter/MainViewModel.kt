@@ -19,19 +19,17 @@ class MainViewModel(private val repository: WordRepository) : ViewModel() {
     )
 
     fun addWord(word: String) = viewModelScope.launch {
-        repository.insert(Word(text = word, count = 0, backgroundColor = "#FFFFFF", textColor = "#000000"))
+        repository.insert(Word(text = word, count = 0, backgroundColor = "#FFFFFF", textColor = "#000000", confidenceThreshold = 0.5f))
     }
 
     fun incrementWordCount(result: RecognitionResult) {
-        if (result.confidence > 0.5f) {
-            viewModelScope.launch {
-                val currentWords = words.value
-                val matchedWord = currentWords.find { result.text.contains(it.text, ignoreCase = true) }
-                if (matchedWord != null) {
-                    val updatedWord = matchedWord.copy(count = matchedWord.count + 1)
-                    repository.update(updatedWord)
-                    _wordRecognized.value = updatedWord
-                }
+        viewModelScope.launch {
+            val currentWords = words.value
+            val matchedWord = currentWords.find { result.text.contains(it.text, ignoreCase = true) }
+            if (matchedWord != null && result.confidence >= matchedWord.confidenceThreshold) {
+                val updatedWord = matchedWord.copy(count = matchedWord.count + 1)
+                repository.update(updatedWord)
+                _wordRecognized.value = updatedWord
             }
         }
     }

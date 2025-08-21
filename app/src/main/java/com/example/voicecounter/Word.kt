@@ -10,5 +10,6 @@ data class Word(
     val text: String,
     var count: Int,
     val backgroundColor: String,
-    val textColor: String
+    val textColor: String,
+    val confidenceThreshold: Float = 0.5f
 )
