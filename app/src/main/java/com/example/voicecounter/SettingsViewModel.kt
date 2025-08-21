@@ -14,8 +14,32 @@ class SettingsViewModel(application: Application) : ViewModel() {
     val speakWords: StateFlow<Boolean> = _speakWords
 
     fun setSpeakWords(value: Boolean) {
-        _speakWords.value = value
         sharedPreferences.edit().putBoolean("speak_words", value).apply()
+        _speakWords.value = value
+    }
+
+    private val _extraPartialResults = MutableStateFlow(sharedPreferences.getBoolean("extra_partial_results", true))
+    val extraPartialResults: StateFlow<Boolean> = _extraPartialResults
+
+    fun setExtraPartialResults(value: Boolean) {
+        sharedPreferences.edit().putBoolean("extra_partial_results", value).apply()
+        _extraPartialResults.value = value
+    }
+
+    private val _extraSpeechInputCompleteSilenceLengthMillis = MutableStateFlow(sharedPreferences.getInt("extra_speech_input_complete_silence_length_millis", 1000))
+    val extraSpeechInputCompleteSilenceLengthMillis: StateFlow<Int> = _extraSpeechInputCompleteSilenceLengthMillis
+
+    fun setExtraSpeechInputCompleteSilenceLengthMillis(value: Int) {
+        sharedPreferences.edit().putInt("extra_speech_input_complete_silence_length_millis", value).apply()
+        _extraSpeechInputCompleteSilenceLengthMillis.value = value
+    }
+
+    private val _extraSpeechInputPossiblyCompleteSilenceLengthMillis = MutableStateFlow(sharedPreferences.getInt("extra_speech_input_possibly_complete_silence_length_millis", 500))
+    val extraSpeechInputPossiblyCompleteSilenceLengthMillis: StateFlow<Int> = _extraSpeechInputPossiblyCompleteSilenceLengthMillis
+
+    fun setExtraSpeechInputPossiblyCompleteSilenceLengthMillis(value: Int) {
+        sharedPreferences.edit().putInt("extra_speech_input_possibly_complete_silence_length_millis", value).apply()
+        _extraSpeechInputPossiblyCompleteSilenceLengthMillis.value = value
     }
 }
 

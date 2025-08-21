@@ -1,5 +1,6 @@
 package com.example.voicecounter
 
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -16,16 +17,21 @@ class VoiceRecognition(private val context: Context) {
     private val _speechRecognitionAvailable = MutableStateFlow(SpeechRecognizer.isRecognitionAvailable(context))
     val speechRecognitionAvailable: StateFlow<Boolean> = _speechRecognitionAvailable
 
-    private val _recognitionResult = MutableStateFlow<RecognitionResult?>(null)
-    val recognitionResult: StateFlow<RecognitionResult?> = _recognitionResult
+    private val _recognitionResult = MutableStateFlow<List<RecognitionResult>>(emptyList())
+    val recognitionResult: StateFlow<List<RecognitionResult>> = _recognitionResult
 
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
+    private val sharedPreferences = context.getSharedPreferences("settings", Application.MODE_PRIVATE)
 
     fun startListening() {
         if (!speechRecognitionAvailable.value) {
             return
         }
+        val extraPartialResults = sharedPreferences.getBoolean("extra_partial_results", true)
+        val extraSpeechInputCompleteSilenceLengthMillis = sharedPreferences.getInt("extra_speech_input_complete_silence_length_millis", 1000)
+        val extraSpeechInputPossiblyCompleteSilenceLengthMillis = sharedPreferences.getInt("extra_speech_input_possibly_complete_silence_length_millis", 500)
+
         if (speechRecognizer == null) {
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
             speechRecognizer?.setRecognitionListener(object : RecognitionListener {
@@ -51,24 +57,35 @@ class VoiceRecognition(private val context: Context) {
 
                 override fun onResults(results: Bundle?) {
                     val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    val scores = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)
-                    if (!matches.isNullOrEmpty() && scores != null) {
-                        _recognitionResult.value = RecognitionResult(matches[0], scores[0])
-                    }
+                    val scores = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES) ?: FloatArray(matches?.size ?: 0) { -1f }
+                    _recognitionResult.value = matches?.mapIndexed { index, text ->
+                        RecognitionResult(text, scores.getOrElse(index) { -1f })
+                    } ?: emptyList()
                     if (isListening) {
                         startListening()
                     }
                 }
 
-                override fun onPartialResults(partialResults: Bundle?) {}
+                override fun onPartialResults(partialResults: Bundle?) {
+                    if (extraPartialResults) {
+                        val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        val scores = partialResults?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES) ?: FloatArray(matches?.size ?: 0) { -1f }
+                        _recognitionResult.value = matches?.mapIndexed { index, text ->
+                            RecognitionResult(text, scores.getOrElse(index) { -1f })
+                        } ?: emptyList()
+                    }
+                }
 
                 override fun onEvent(eventType: Int, params: Bundle?) {}
             })
         }
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
-        }
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+        intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, extraPartialResults)
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, extraSpeechInputCompleteSilenceLengthMillis)
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, extraSpeechInputPossiblyCompleteSilenceLengthMillis)
+
         isListening = true
         speechRecognizer?.startListening(intent)
     }

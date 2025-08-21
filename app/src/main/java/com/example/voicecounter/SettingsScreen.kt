@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,6 +28,9 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel(factory = SettingsViewModelFactory(LocalContext.current.applicationContext as android.app.Application))
 ) {
     val speakWords by viewModel.speakWords.collectAsState()
+    val extraPartialResults by viewModel.extraPartialResults.collectAsState()
+    val extraSpeechInputCompleteSilenceLengthMillis by viewModel.extraSpeechInputCompleteSilenceLengthMillis.collectAsState()
+    val extraSpeechInputPossiblyCompleteSilenceLengthMillis by viewModel.extraSpeechInputPossiblyCompleteSilenceLengthMillis.collectAsState()
 
     Scaffold(
         topBar = {
@@ -56,6 +60,36 @@ fun SettingsScreen(
                 Switch(
                     checked = speakWords,
                     onCheckedChange = { viewModel.setSpeakWords(it) }
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Enable partial results", modifier = Modifier.weight(1f))
+                Switch(
+                    checked = extraPartialResults,
+                    onCheckedChange = { viewModel.setExtraPartialResults(it) }
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Column {
+                Text(text = "Complete silence length: $extraSpeechInputCompleteSilenceLengthMillis ms")
+                Slider(
+                    value = extraSpeechInputCompleteSilenceLengthMillis.toFloat(),
+                    onValueChange = { viewModel.setExtraSpeechInputCompleteSilenceLengthMillis(it.toInt()) },
+                    valueRange = 0f..5000f,
+                    steps = 50
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Column {
+                Text(text = "Possibly complete silence length: $extraSpeechInputPossiblyCompleteSilenceLengthMillis ms")
+                Slider(
+                    value = extraSpeechInputPossiblyCompleteSilenceLengthMillis.toFloat(),
+                    onValueChange = { viewModel.setExtraSpeechInputPossiblyCompleteSilenceLengthMillis(it.toInt()) },
+                    valueRange = 0f..5000f,
+                    steps = 50
                 )
             }
         }

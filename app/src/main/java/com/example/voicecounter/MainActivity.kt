@@ -85,9 +85,7 @@ fun CounterScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit) {
     var flashColor by remember { mutableStateOf(Color.Transparent) }
 
     LaunchedEffect(recognitionResult) {
-        recognitionResult?.let {
-            viewModel.incrementWordCount(it)
-        }
+        viewModel.incrementWordCount(recognitionResult)
     }
 
     LaunchedEffect(wordRecognized) {
