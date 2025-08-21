@@ -7,7 +7,10 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-class MainViewModel(private val repository: WordRepository) : ViewModel() {
+class MainViewModel(application: Application, private val repository: WordRepository) : ViewModel() {
+
+    private val tts = TextToSpeech(application)
+    private val sharedPreferences = application.getSharedPreferences("settings", Application.MODE_PRIVATE)
 
     private val _wordRecognized = MutableStateFlow<Word?>(null)
     val wordRecognized: StateFlow<Word?> = _wordRecognized
@@ -30,6 +33,9 @@ class MainViewModel(private val repository: WordRepository) : ViewModel() {
                 val updatedWord = matchedWord.copy(count = matchedWord.count + 1)
                 repository.update(updatedWord)
                 _wordRecognized.value = updatedWord
+                if (sharedPreferences.getBoolean("speak_words", false)) {
+                    tts.speak(updatedWord.text)
+                }
             }
         }
     }
@@ -49,6 +55,11 @@ class MainViewModel(private val repository: WordRepository) : ViewModel() {
     fun resetAllCounts() = viewModelScope.launch {
         repository.resetAllCounts()
     }
+
+    override fun onCleared() {
+        super.onCleared()
+        tts.shutdown()
+    }
 }
 
 class MainViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
@@ -57,7 +68,7 @@ class MainViewModelFactory(private val application: Application) : ViewModelProv
             val database = AppDatabase.getDatabase(application)
             val repository = WordRepository(database.wordDao())
             @Suppress("UNCHECKED_CAST")
-            return MainViewModel(repository) as T
+            return MainViewModel(application, repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

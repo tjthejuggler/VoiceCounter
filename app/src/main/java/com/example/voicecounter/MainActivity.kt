@@ -17,6 +17,9 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,7 +47,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             VoiceCounterTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    CounterScreen(viewModel = viewModel(factory = MainViewModelFactory(application)))
+                    VoiceCounterApp(viewModel = viewModel(factory = MainViewModelFactory(application)))
                 }
             }
         }
@@ -52,7 +55,25 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun CounterScreen(viewModel: MainViewModel) {
+fun VoiceCounterApp(viewModel: MainViewModel) {
+    val navController = rememberNavController()
+    NavHost(navController = navController, startDestination = "counter") {
+        composable("counter") {
+            CounterScreen(
+                viewModel = viewModel,
+                onNavigateToSettings = { navController.navigate("settings") }
+            )
+        }
+        composable("settings") {
+            SettingsScreen(
+                onNavigateUp = { navController.popBackStack() }
+            )
+        }
+    }
+}
+
+@Composable
+fun CounterScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit) {
     val context = LocalContext.current
     val voiceRecognition = remember { VoiceRecognition(context) }
     val recognitionResult by voiceRecognition.recognitionResult.collectAsState()
@@ -84,25 +105,28 @@ fun CounterScreen(viewModel: MainViewModel) {
         }
     }
 
-    Scaffold(
-        floatingActionButton = {
-            Column {
-                FloatingActionButton(onClick = { showAddWordDialog = true }) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Word")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                FloatingActionButton(onClick = { viewModel.resetAllCounts() }) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Reset")
+    val animatedColor by animateColorAsState(targetValue = flashColor, animationSpec = tween(500))
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        Scaffold(
+            floatingActionButton = {
+                Column {
+                    FloatingActionButton(onClick = { showAddWordDialog = true }) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Word")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FloatingActionButton(onClick = { viewModel.resetAllCounts() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Reset")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FloatingActionButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
                 }
             }
-        }
-    ) { paddingValues ->
-        val animatedColor by animateColorAsState(targetValue = flashColor, animationSpec = tween(500))
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(animatedColor)
-        ) {
+        ) { paddingValues ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -134,6 +158,11 @@ fun CounterScreen(viewModel: MainViewModel) {
                 }
             }
         }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(animatedColor)
+        )
     }
 
     if (showSettingsDialog != null) {
@@ -173,7 +202,7 @@ fun WordCard(word: Word, onSettingsClick: () -> Unit) {
             }
             Text(
                 text = word.count.toString(),
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.displayLarge,
                 textAlign = TextAlign.Center,
                 color = Color(android.graphics.Color.parseColor(word.textColor)),
                 modifier = Modifier.align(Alignment.Center)
@@ -307,6 +336,6 @@ fun ColorPicker(title: String, color: String, onColorChange: (String) -> Unit) {
 @Composable
 fun DefaultPreview() {
     VoiceCounterTheme {
-        CounterScreen(viewModel = viewModel(factory = MainViewModelFactory(LocalContext.current.applicationContext as android.app.Application)))
+        VoiceCounterApp(viewModel = viewModel(factory = MainViewModelFactory(LocalContext.current.applicationContext as android.app.Application)))
     }
 }
